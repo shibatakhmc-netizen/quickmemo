@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>QuickMemo</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+      background: #f0f4f8;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ===== ログイン画面 ===== */
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100dvh;
+      gap: 32px;
+      padding: 40px;
+    }
+
+    .login-logo {
+      font-size: 48px;
+      font-weight: 800;
+      color: #1a73e8;
+      letter-spacing: -1px;
+    }
+
+    .login-logo span {
+      color: #34a853;
+    }
+
+    .login-subtitle {
+      font-size: 15px;
+      color: #666;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .google-login-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: box-shadow 0.2s;
+      width: 100%;
+      max-width: 300px;
+      justify-content: center;
+    }
+
+    .google-login-btn:active {
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    .google-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* ===== メイン画面 ===== */
+    #main-screen { display: none; flex-direction: column; height: 100dvh; }
+
+    /* ヘッダー */
+    header {
+      background: #1a73e8;
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #666;
+      transition: background 0.3s;
+    }
+
+    .status-icon.connected { background: #34a853; }
+
+    .logout-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* タブ */
+    .tabs {
+      display: flex;
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      flex-shrink: 0;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: #888;
+      border: none;
+      background: none;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      color: #1a73e8;
+      border-bottom-color: #1a73e8;
+    }
+
+    /* トグル */
+    .toggle-bar {
+      display: flex;
+      background: white;
+      padding: 8px 16px;
+      justify-content: flex-end;
+      border-bottom: 1px solid #e0e0e0;
+      flex-shrink: 0;
+    }
+
+    .toggle {
+      display: flex;
+      background: #f0f4f8;
+      border-radius: 8px;
+      padding: 3px;
+    }
+
+    .toggle-btn {
+      padding: 6px 16px;
+      border: none;
+      background: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: white;
+      color: #1a73e8;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    /* 入力エリア */
+    #input-area {
+      background: white;
+      padding: 16px;
+      border-bottom: 1px solid #e0e0e0;
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .input-field {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .input-field:focus { border-color: #1a73e8; }
+
+    textarea.input-field {
+      resize: none;
+      height: 80px;
+    }
+
+    .save-btn {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+
+    .save-btn:active { background: #1557b0; }
+
+    .detail-toggle {
+      font-size: 13px;
+      color: #1a73e8;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      margin-bottom: 8px;
+    }
+
+    #detail-fields { display: none; }
+    #detail-fields.open { display: block; }
+
+    /* 検索 */
+    .search-bar {
+      padding: 8px 16px;
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search-input:focus { border-color: #1a73e8; }
+
+    .search-clear {
+      background: none;
+      border: none;
+      font-size: 18px;
+      color: #999;
+      cursor: pointer;
+      padding: 4px;
+      display: none;
+    }
+
+    /* 履歴一覧 */
+    #history-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .item-card {
+      background: white;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .item-card-content { flex: 1; min-width: 0; }
+
+    .item-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #222;
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+
+    .item-content {
+      font-size: 13px;
+      color: #666;
+      word-break: break-all;
+    }
+
+    .item-meta {
+      font-size: 12px;
+      color: #aaa;
+      margin-top: 6px;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 2px;
+    }
+
+    .delete-btn:active { color: #e53935; }
+
+    .todo-check {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      cursor: pointer;
+      margin-top: 2px;
+    }
+
+    .item-card.completed .item-title {
+      text-decoration: line-through;
+      color: #aaa;
+    }
+
+    .completed-section {
+      margin-top: 16px;
+    }
+
+    .completed-toggle {
+      font-size: 13px;
+      color: #888;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 0;
+      margin-bottom: 8px;
+    }
+
+    .empty-msg {
+      text-align: center;
+      color: #bbb;
+      font-size: 14px;
+      padding: 40px 0;
+    }
+
+    .deadline-badge {
+      display: inline-block;
+      background: #fff3e0;
+      color: #e65100;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div id="login-screen">
+  <div class="login-logo">Quick<span>Memo</span></div>
+  <p class="login-subtitle">医療現場のメモ・ToDo・カレンダーを<br>クラウドで安全に管理</p>
+  <button class="google-login-btn" onclick="loginWithGoogle()">
+    <svg class="google-icon" viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+    Googleでログイン
+  </button>
+</div>
+
+<!-- メイン画面 -->
+<div id="main-screen">
+  <header>
+    <div class="header-title">
+      <div class="status-icon" id="status-icon"></div>
+      QuickMemo
+    </div>
+    <button class="logout-btn" onclick="logout()">ログアウト</button>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('memo', this)">メモ</button>
+    <button class="tab" onclick="switchTab('todo', this)">ToDo</button>
+    <button class="tab" onclick="switchTab('calendar', this)">カレンダー</button>
+  </div>
+
+  <div class="toggle-bar">
+    <div class="toggle">
+      <button class="toggle-btn active" id="btn-input" onclick="switchMode('input')">入力</button>
+      <button class="toggle-btn" id="btn-history" onclick="switchMode('history')">履歴</button>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <div class="input-row">
+      <input class="input-field" id="title-input" type="text" placeholder="タイトル（必須）">
+    </div>
+
+    <button class="detail-toggle" onclick="toggleDetail()">▼ 詳細を入力</button>
+
+    <div id="detail-fields">
+      <textarea class="input-field" id="content-input" placeholder="内容（任意）"></textarea>
+      <div id="todo-fields" style="display:none; margin-top:8px;">
+        <input class="input-field" id="deadline-input" type="datetime-local" style="width:100%;">
+      </div>
+      <div id="calendar-fields" style="display:none; margin-top:8px;">
+        <input class="input-field" id="start-input" type="datetime-local" placeholder="開始日時" style="width:100%; margin-bottom:8px;">
+        <input class="input-field" id="end-input" type="datetime-local" placeholder="終了日時" style="width:100%;">
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="saveItem()" style="margin-top:12px;">保存</button>
+  </div>
+
+  <div class="search-bar">
+    <input class="search-input" id="search-input" type="text" placeholder="🔍 検索..." oninput="onSearch()">
+    <button class="search-clear" id="search-clear" onclick="clearSearch()">×</button>
+  </div>
+
+  <div id="history-area"></div>
+</div>
+
+<script>
+  // ===== Supabase 設定 =====
+  const SUPABASE_URL = 'https://rgoxermyzjsumharusui.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_wW64Ol3e49aI-16eY3bIOw_SnZ_Vn5D';
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentTab = 'memo';
+  let currentMode = 'input';
+  let allItems = [];
+  let currentUser = null;
+  let showCompleted = false;
+
+  // ===== 初期化 =====
+  async function init() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      currentUser = session.user;
+      showMain();
+    }
+
+    sb.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        currentUser = session.user;
+        showMain();
+      } else {
+        currentUser = null;
+        showLogin();
+      }
+    });
+  }
+
+  function showMain() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-screen').style.display = 'flex';
+    document.getElementById('status-icon').classList.add('connected');
+    loadItems();
+  }
+
+  function showLogin() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('main-screen').style.display = 'none';
+  }
+
+  // ===== 認証 =====
+  async function loginWithGoogle() {
+    await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: location.href }
+    });
+  }
+
+  async function logout() {
+    if (!confirm('ログアウトしますか？')) return;
+    await sb.auth.signOut();
+  }
+
+  // ===== タブ・モード切り替え =====
+  function switchTab(tab, el) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('todo-fields').style.display = tab === 'todo' ? 'block' : 'none';
+    document.getElementById('calendar-fields').style.display = tab === 'calendar' ? 'block' : 'none';
+    renderItems();
+  }
+
+  function switchMode(mode) {
+    currentMode = mode;
+    document.getElementById('btn-input').classList.toggle('active', mode === 'input');
+    document.getElementById('btn-history').classList.toggle('active', mode === 'history');
+    document.getElementById('input-area').style.display = mode === 'input' ? 'block' : 'none';
+    document.querySelector('.search-bar').style.display = mode === 'history' ? 'flex' : 'none';
+  }
+
+  function toggleDetail() {
+    const el = document.getElementById('detail-fields');
+    el.classList.toggle('open');
+    document.querySelector('.detail-toggle').textContent = el.classList.contains('open') ? '▲ 詳細を閉じる' : '▼ 詳細を入力';
+  }
+
+  // ===== データ操作 =====
+  async function loadItems() {
+    const { data, error } = await sb.from('items').select('*').order('created_at', { ascending: false });
+    if (error) { console.error(error); return; }
+    allItems = data || [];
+    renderItems();
+  }
+
+  async function saveItem() {
+    const title = document.getElementById('title-input').value.trim();
+    if (!title) { alert('タイトルを入力してください'); return; }
+
+    const item = {
+      user_id: currentUser.id,
+      type: currentTab,
+      title,
+      content: document.getElementById('content-input').value.trim() || null,
+      deadline: currentTab === 'todo' ? (document.getElementById('deadline-input').value || null) : null,
+      start_at: currentTab === 'calendar' ? (document.getElementById('start-input').value || null) : null,
+      end_at: currentTab === 'calendar' ? (document.getElementById('end-input').value || null) : null,
+    };
+
+    const { error } = await sb.from('items').insert(item);
+    if (error) { alert('保存に失敗しました'); console.error(error); return; }
+
+    document.getElementById('title-input').value = '';
+    document.getElementById('content-input').value = '';
+    document.getElementById('deadline-input').value = '';
+    document.getElementById('start-input').value = '';
+    document.getElementById('end-input').value = '';
+
+    await loadItems();
+    switchMode('history');
+  }
+
+  async function deleteItem(id) {
+    if (!confirm('削除しますか？')) return;
+    const { error } = await sb.from('items').delete().eq('id', id);
+    if (error) { alert('削除に失敗しました'); return; }
+    await loadItems();
+  }
+
+  async function toggleComplete(id, current) {
+    await sb.from('items').update({ completed: !current }).eq('id', id);
+    await loadItems();
+  }
+
+  // ===== 検索 =====
+  function onSearch() {
+    const val = document.getElementById('search-input').value;
+    document.getElementById('search-clear').style.display = val ? 'block' : 'none';
+    renderItems();
+  }
+
+  function clearSearch() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-clear').style.display = 'none';
+    renderItems();
+  }
+
+  // ===== 描画 =====
+  function renderItems() {
+    const keyword = document.getElementById('search-input').value.toLowerCase();
+    const filtered = allItems.filter(i => {
+      if (i.type !== currentTab) return false;
+      if (!keyword) return true;
+      return (i.title || '').toLowerCase().includes(keyword) || (i.content || '').toLowerCase().includes(keyword);
+    });
+
+    const area = document.getElementById('history-area');
+
+    if (currentTab === 'todo') {
+      const active = filtered.filter(i => !i.completed);
+      const done = filtered.filter(i => i.completed);
+      area.innerHTML = active.map(renderCard).join('') || (done.length === 0 ? '<p class="empty-msg">ToDoがありません</p>' : '');
+      if (done.length > 0) {
+        area.innerHTML += `
+          <div class="completed-section">
+            <button class="completed-toggle" onclick="toggleCompleted()">
+              ${showCompleted ? '▲' : '▼'} 完了済み ${done.length}件
+            </button>
+            ${showCompleted ? done.map(renderCard).join('') : ''}
+          </div>`;
+      }
+    } else {
+      area.innerHTML = filtered.length ? filtered.map(renderCard).join('') : '<p class="empty-msg">データがありません</p>';
+    }
+  }
+
+  function renderCard(item) {
+    const date = new Date(item.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const deadlineBadge = item.deadline ? `<span class="deadline-badge">期限: ${new Date(item.deadline).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>` : '';
+    const checkbox = item.type === 'todo' ? `<input type="checkbox" class="todo-check" ${item.completed ? 'checked' : ''} onchange="toggleComplete('${item.id}', ${item.completed})">` : '';
+    return `
+      <div class="item-card ${item.completed ? 'completed' : ''}">
+        ${checkbox}
+        <div class="item-card-content">
+          <div class="item-title">${escHtml(item.title)}</div>
+          ${item.content ? `<div class="item-content">${escHtml(item.content)}</div>` : ''}
+          ${deadlineBadge}
+          <div class="item-meta">${date}</div>
+        </div>
+        <button class="delete-btn" onclick="deleteItem('${item.id}')">🗑</button>
+      </div>`;
+  }
+
+  function escHtml(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function toggleCompleted() {
+    showCompleted = !showCompleted;
+    renderItems();
+  }
+
+  // ===== 起動 =====
+  init();
+</script>
+</body>
+</html>
