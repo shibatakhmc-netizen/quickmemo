@@ -606,9 +606,16 @@
     }
   }
 
+  function fmtDate(str) {
+    if (!str) return '';
+    const d = new Date(str);
+    return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+
   function renderCard(item) {
-    const date = new Date(item.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const deadlineBadge = item.deadline ? `<span class="deadline-badge">期限: ${new Date(item.deadline).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>` : '';
+    const date = fmtDate(item.created_at);
+    const deadlineBadge = item.deadline ? `<span class="deadline-badge">期限: ${fmtDate(item.deadline)}</span>` : '';
+    const calendarBadge = item.start_at ? `<span class="deadline-badge">📅 ${fmtDate(item.start_at)}${item.end_at ? ' - ' + fmtDate(item.end_at) : ''}</span>` : '';
     const checkbox = item.type === 'todo' ? `<input type="checkbox" class="todo-check" ${item.completed ? 'checked' : ''} onchange="toggleComplete('${item.id}', ${item.completed})">` : '';
     return `
       <div class="item-card ${item.completed ? 'completed' : ''}">
@@ -616,7 +623,7 @@
         <div class="item-card-content">
           <div class="item-title">${escHtml(item.title)}</div>
           ${item.content ? `<div class="item-content">${escHtml(item.content)}</div>` : ''}
-          ${deadlineBadge}
+          ${deadlineBadge}${calendarBadge}
           <div class="item-meta">${date}</div>
         </div>
         <button class="delete-btn" onclick="deleteItem('${item.id}')">🗑</button>
